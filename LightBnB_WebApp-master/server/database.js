@@ -1,12 +1,6 @@
 const properties = require('./json/properties.json');
 const users = require('./json/users.json');
-const { Pool } = require('pg')
-const pool = new Pool ({
-  host: 'localhost',
-  user: 'vagrant',
-  password: '123',
-  database: 'lightbnb'
-})
+const dbi = require('./databaseIndex')
 /// Users
 
 /**
@@ -18,7 +12,7 @@ const getUserWithEmail = function(email) {
   const text = `SELECT * FROM users WHERE email = $1`;
   const values = [email.toLowerCase()];
 
-  return pool
+  return dbi
     .query(text, values)
     .then(res => res.rows[0])
     .catch(error => console.error('USER NULL', error.stack))
@@ -34,7 +28,7 @@ const getUserWithId = function(id) {
   const text = `SELECT * FROM users WHERE id = $1`;
   const values = [id];
 
-  return pool
+  return dbi
     .query(text, values)
     .then(res => res.rows[0])
     .catch(error => console.error('USER NULL', error.stack))
@@ -56,7 +50,7 @@ const addUser =  function(user) {
   RETURNING *`;
   const values = [userName, userPass, userEmail];
 
-  return pool
+  return dbi
     .query(text, values)
     .then(res => res.rows[0])
     .catch(error => console.error('Error', error.stack));
@@ -82,7 +76,7 @@ const getAllReservations = function(guest_id, limit = 10) {
   LIMIT $2`;
   const values = [guest_id, limit];
 
-  return pool
+  return dbi
     .query(text, values)
     .then(res => res.rows)
     .catch(error => console.error('Error', error.stack));
@@ -136,7 +130,7 @@ const getAllProperties = function(options, limit = 10) {
   // 5
   console.log(queryString, queryParams);
   // 6
-  return pool.query(queryString, queryParams)
+  return dbi.query(queryString, queryParams)
   .then(res => res.rows);
 }
 exports.getAllProperties = getAllProperties;
@@ -148,9 +142,15 @@ exports.getAllProperties = getAllProperties;
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function(property) {
-  const propertyId = Object.keys(properties).length + 1;
-  property.id = propertyId;
-  properties[propertyId] = property;
-  return Promise.resolve(property);
+  const values = [property.owner_id, property.title, property.description, property.thumbnail_photo_url, property.cover_photo_url,
+  property.cost_per_night, property.street, property.city, property.province, property.post_code, property.country, 
+  property.parking_spaces, property.number_of_bathrooms, property.number_of_bedrooms];
+
+  return dbi.query(`
+  INSERT INTO properties (owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, street, city, province, post_code, 
+  country, parking_spaces, number_of_bathrooms, number_of_bedrooms)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *;
+  `, values)
+  .then(res => res.rows[0]);
 }
 exports.addProperty = addProperty;
